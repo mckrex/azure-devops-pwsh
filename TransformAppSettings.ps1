@@ -144,14 +144,3 @@ $transformFile = Get-ChildItem -Path $FileSource -Filter "appsettings.$Environme
 
 Edit-AppSettings -baseFile $baseFile -transformFile $transformFile
 
-<#
-TESTING
-
-Copy-Item -Path "C:\_prj\Tasks\devops\app_transform\tests\source_folder_bak\*" -Destination "C:\_prj\Tasks\devops\app_transform\tests\source_folder" -Recurse -Force
-
-$env:ENVIRONMENT = "QA"
-$env:FILESOURCE = "C:\_prj\Tasks\devops\app_transform\tests\"
-
-
-. C:\_prj\AccountNet\DeployScripts\Release_TransformAppSettings.ps1 -SpecificPropertiesSource "appsettings.ALL.json"
-#>
