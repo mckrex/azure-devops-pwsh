@@ -5,28 +5,37 @@
   .DESCRIPTION
   .Net Core use .json files for external app configuration (typically appsettings.json). The standard means to transform a settings file
   deploying to various environments is to overlay some or all of a base settings file with a file matched to an environemnr. For example, when 
-  deploying to QA, at startup, the application can overlay appsettinfs.json with a file called appsettings.QA.json, then load those settings 
+  deploying to QA, at startup, the application can overlay appsettings.json with a file called appsettings.QA.json, then load those settings 
   into memory.
 
   For various reasons, an organization may need to employ logic more similar to that used for transforming XML configuration files. This script 
-  fulfills that goal producing a single file that can be copied to the server before application startup. It is specifically created for use in
+  fulfills that goal, producing a single file that can be copied to the server before application startup. It is specifically created for use in
   Azure DevOps release pipelines and is constructed to be called by a PowerShell pipeline task.
 
   The script uses a pipe character in the json property name to indicate the transformation action. The available actions are defined in the 
   TransformType enum.
 
   .PARAMETER FileSource
-  A directory containing a base json settings file and files to be used for it's transformation. Defaults to an environment vairable of the same 
+  A directory containing a base json settings file and files to be used for its transformation. Defaults to an environment vairable of the same 
   name.
 
-  .PARAMETER Environment
-  For transformations when deploying to an environment, the environment name to be used to find a transform file.
+  .PARAMETER BaseFileName
+  The base file that needs to be transformed, typically 'AppSettings.json'. Files to be used to alter that base file must have the name pattern 
+  'AppSettings.SOMENAME.json'. Typically, the tranformation file would be named for an environment: 'AppSettings.QA.json'. ANY file matching the
+  pattern will be used to transform the base file. The transform files are collected by Get-ChildItem using the default, alphabetical order. The 
+  'Merge' tranform action can be used to prevent multiple files from overwriting certain settings, andthe file names can be used to control the 
+  order of tranforamtions.
+
+  .PARAMETER OutputDirectory
+  The output location for the transformed file, which will have the same name as the base file. If the FileSource and OutputDirectory are the same,
+  the original file will be overwritten.
 #>
 
 
 param (
     $FileSource = $env:FILESOURCE, 
-    $Environment = $env:ENVIRONMENT
+    $BaseFileName = $env:BASEFILENAME, 
+    $OutputDirectory = $env:OUTPUTDIRECTORY
 )
 
 
@@ -34,13 +43,14 @@ if ($host.Version.Major -eq 7) {
     $PSStyle.OutputRendering = [System.Management.Automation.OutputRendering]::PlainText;
 }
 
+ $debug = $DebugPreference -eq "SilentlyContinue"
 <#
 .DESCRIPTION
 Holds values used in a tranformation file that indicate the changes to the base file. The available actions are:
 REPLACE: replace a property completely, including nested properties
-MERGE: for arrays; merges new values into an exisiting object
+MERGE: for arrays and objects; merges new values into an exisiting object
 ADD: adds a property not present in the base file
-REMOVE: removes a property from the base settings file
+REMOVE: removes a property from the base file
 #>
 enum TransformType {
     REPLACE
@@ -48,7 +58,17 @@ enum TransformType {
     ADD
     REMOVE
 }
-
+class TransformationData {
+    [string]$FileName
+    [PSCustomObject]$TransformObject
+    TransformationData([string]$fileName, [PSCustomObject]$TransformObject){
+        $this.Init($fileName, $transformObject)
+    }
+    hidden [void] Init([string]$fileName, [PSCustomObject]$transformObject){
+        $this.FileName = $fileName
+        $this.TransformObject = $transformObject
+    }
+}
 
 function Edit-SettingsObject{
     param(
@@ -60,50 +80,67 @@ function Edit-SettingsObject{
         $transformObject, 
         [Int32]
         #the depth to search for properties to tranform
-        $level
+        $maxLevel = 10
         )
-    param($baseObject, $transformObject, $level)
     $baseObject.PSObject.Properties | ForEach-Object {
+        $level = 1
         Write-Host "loop base      -> $($_.Name)"
         if([bool]$transformObject.PSObject.Properties[$_.Name] `
           -and $transformObject.PSObject.Properties[$_.Name].Value.GetType().Name -eq "PSCustomObject" `
           -and $transformObject.PSObject.Properties[$_.Name].Value.GetType() -eq $_.Value.GetType()){
             Write-Host "               -> RECURSE $level"
-            Edit-SettingsObject -baseObject $_.Value -transformObject $transformObject.PSObject.Properties[$_.Name].Value -level ($level + 1)
+            $tempUpdatedObject = Edit-SettingsObject -baseObject $_.Value -transformObject $transformObject.PSObject.Properties[$_.Name].Value -level ($level + 1)
+            $baseObject.PSObject.Properties[$_.Name].Value =  $tempUpdatedObject
+            #$baseObject.PSObject.Properties.Remove($_.Name)
+            #$baseObject | Add-Member -NotePropertyName $_.Name -NotePropertyValue $tempUpdatedObject
         }
     }
     $transformObject.PSObject.Properties | ForEach-Object {
-        Write-Host "loop transform -> $($_.Name)"
-        if ($_.Name.Contains("|")){
-            $setting = $_.Name.Split("|")
-            if ([bool]$baseObject.PSObject.Properties[$setting[0]]){
-                switch ([TransformType]$setting[1]){
-                    REPLACE {
-                        Write-Host "       replace -> $($setting[0])"
-                        #$baseObject.PSObject.Properties[$setting[0]] = $_
+        $tranformSettingName = $_.Name
+        Write-Host "loop transform -> $tranformSettingName"
+        if ($tranformSettingName.Contains("|")){
+            $settingData = $tranformSettingName.Split("|")
+            if ([enum]::GetNames([TransformType]).Contains($settingData[0]) -and [bool]$baseObject.PSObject.Properties[$settingData[1]]){
+                switch ([TransformType]$settingData[0]){
+                    REPLACE { 
+                        Write-Host "       replace -> $($settingData[1])"
+                        Write-Host "       $($baseObject.PSObject.Properties[$settingData[1]].Value) becomes $($transformObject.PSObject.Properties[$tranformSettingName].Value)"
+                        if ($baseObject.PSObject.Properties[$settingData[1]].Value -is [Array]){
+                            $baseObject.PSObject.Properties[$settingData[1]].Value = @($transformObject.PSObject.Properties[$tranformSettingName].Value)
+                        } else {
+                            $baseObject.PSObject.Properties[$settingData[1]].Value = $transformObject.PSObject.Properties[$tranformSettingName].Value
+                        }
+                        return
                     }
                     MERGE {
-                        Write-Host "       merge   -> $($setting[0])"
-                        # if ($baseObject.PSObject.Properties[$setting[0]] -is [Array]){
-                        #     $baseObject.$settingName += $_
-                        # }
-                        # else{}
-                    }
-                    ADD {
-                        Write-Host "       add     -> $($setting[0])"
-                        #$baseObject | Add-Member -NotePropertyName $setting[0] -NotePropertyValue $_
+                        Write-Host "       merge   -> $($settingData[1])"
+                        Write-Host "       $($baseObject.PSObject.Properties[$settingData[1]].Value) adding $($transformObject.PSObject.Properties[$tranformSettingName].Value)"
+                        if ($baseObject.PSObject.Properties[$settingData[1]].Value -is [Array]){
+                            $baseObject.PSObject.Properties[$settingData[1]].Value += $transformObject.PSObject.Properties[$tranformSettingName].Value
+                        } elseif ($baseObject.PSObject.Properties[$settingData[1]].Value.GetType().Name -eq "PSCustomObject") {
+                            Write-Host "       properties cannot be merged into complex objects; use the 'add' transform action on a new property inside the object instead"
+                        } 
+                        return
                     }
                     REMOVE {
-                        Write-Host "       remove  -> $($setting[0])"
-                        #$baseObject.PSObject.Properties.Remove($setting[0])
+                        Write-Host "       remove  -> $($settingData[1]) : $($baseObject.PSObject.Properties[$settingData[1]].Value)"
+                        $baseObject.PSObject.Properties.Remove($settingData[1])
+                        return
                     }
                 }
+            } elseif ([TransformType]$settingData[0] -eq [TransformType]::ADD -and [bool]$baseObject.PSObject.Properties[$settingData[1]] -eq $false){
+                Write-Host "       add     -> $($settingData[1]) : $($transformObject.PSObject.Properties[$tranformSettingName].Value)"
+                $baseObject | Add-Member -NotePropertyName $settingData[1] -NotePropertyValue $transformObject.PSObject.Properties[$tranformSettingName].Value
+                return
+            } elseif ([TransformType]$settingData[0] -eq [TransformType]::ADD -and [bool]$baseObject.PSObject.Properties[$settingData[1]]){
+                Write-Host "       property already exisits and cannot be added or altered using the 'add' transform action"
+                return
             }
         } else {
             Write-Host "       none    -> $($_.Name)"
         }
-        
     }
+    return $baseObject
 
 }
 
@@ -113,23 +150,35 @@ Alters a base settings file with a transform file. The content of each file is l
 #>
 function Edit-AppSettings {
     param(
-        [string]
+        [PSObject]
         #the content file to be transformed
         $baseFile,
-        [string]
-        #the content file used to transform the base file
-        $transformFile
+        [Array]
+        #the content files used to transform the base file
+        $transformFiles
         ) 
-    [string]::Format("Applying values to base settings file {0} using {1}", $baseFile.Name, $transformFile.Name) | Write-Host 
-    # load the content of the base settings file and the transform settings file
+    # load the content of the base settings file
     try {
-        $baseObject = Get-Content "$baseFile" -Raw | ConvertFrom-Json
-        $transformObject = Get-Content "$transformFile" -Raw | ConvertFrom-Json
+        $baseObject = Get-Content $baseFile.FullName -Raw | ConvertFrom-Json
     } catch {
         Write-Host $_.Exception
         return
     }
-    Edit-SettingsObject -baseObject $baseObject -transformObject $transformObject -level 1
+    # load the content of all transform files
+    $transformObjects = @()
+    $transformFiles | ForEach-Object {
+        try {
+            $transformObjects += [TransformationData]::new($_.Name, (Get-Content $_.FullName -Raw | ConvertFrom-Json))
+        } catch {
+            Write-Host $_.Exception
+            return
+        }
+    }
+    $transformObjects | ForEach-Object {
+        [string]::Format("Applying values to base settings file {0} using {1}", $baseFile.Name, $_.FileName) | Write-Host 
+        $baseObject = Edit-SettingsObject -baseObject $baseObject -transformObject $_.TransformObject -level 1
+    }
+    return $baseObject
 }
 
 
@@ -139,8 +188,22 @@ if ($false -eq (Test-Path -Path $FileSource)) {
     Write-Host "No directory found at source location $FileSource"
 }
 
-$baseFile = Get-ChildItem -Path $FileSource -Filter "appsettings.json" -Recurse
-$transformFile = Get-ChildItem -Path $FileSource -Filter "appsettings.$Environment.json" -Recurse
+$baseFile = Get-ChildItem -Path $FileSource\* -Filter $BaseFileName
+$transformFiles = Get-ChildItem -Path $FileSource\* -Filter $BaseFileName.Replace(".json", ".*.json") -Exclude $BaseFileName
+$updatedSettings = Edit-AppSettings -baseFile $baseFile -transformFiles $transformFiles
+if ($debug -eq $true){
+    $count = (((Get-ChildItem -Path $OutputDirectory -Filter $BaseFileName.Replace(".json", "*.json")).Name | Where-Object {$_ -match "\d{3}.json"} ).Count + 1).ToString("000")
+    $updatedSettings | ConvertTo-Json | Out-File (Join-Path -Path $OutputDirectory -ChildPath $BaseFileName.Replace(".json", ".$count.json")) -Force
+    return
+}
+$updatedSettings | ConvertTo-Json | Out-File (Join-Path -Path $OutputDirectory -ChildPath $BaseFileName) -Force
 
-Edit-AppSettings -baseFile $baseFile -transformFile $transformFile
+<#
+
+cd D:\_prj\github\azure_devops_pwsh
+
+$env:FILESOURCE = "tests\basic_tests\alter_object"
+$env:BASEFILENAME = "appsettings.json"
+$env:OUTPUTDIRECTORY = "tests\basic_tests\alter_object\output"
+#>
 
