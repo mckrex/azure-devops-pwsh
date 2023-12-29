@@ -1,0 +1,291 @@
+[
+
+
+{
+  "overview": {
+    "title": "Alliant Credit Union",
+    "url": "www.alliantcreditunion.com",
+    "ainfo": "mkrecker",
+    "ps": 66,
+    "pbe": 0.0,
+    "pgrng": false,
+    "URLs": [
+      {
+        "l": "website",
+        "u": "www.alliantcreditunion.com",
+        "m": "default"
+      },
+      {
+        "l": "website",
+        "u": "securemail.alliantcreditunion.com/securereader/login.jsf",
+        "m": "default"
+      }
+    ],
+    "tags": [
+      "bills"
+    ]
+  },
+  "details": {
+    "sections": [
+      {
+        "name": "Section_xunegymntdgbd2goirfhuxoppi",
+        "title": "",
+        "fields": [
+          {
+            "t": "member number",
+            "v": " 0025690811",
+            "k": "string",
+            "n": "3ooprd7vzyxfempg2mrjy7poda"
+          },
+          {
+            "t": "email pass",
+            "v": "Bowie-Ledge78",
+            "k": "concealed",
+            "n": "zvjusamly7uu334gszgifq76gy"
+          },
+          {
+            "t": "main account number",
+            "n": "yy2bh23ecqebbl3k7g3rypolgu",
+            "k": "concealed",
+            "v": "10100256908118",
+            "inputTraits": {
+              "autocorrection": "no",
+              "autocapitalization": "none"
+            }
+          },
+          {
+            "t": "routing number",
+            "n": "rvcle365r34ajkhnl6ee4vhzve",
+            "k": "concealed",
+            "v": "271081528",
+            "inputTraits": {
+              "autocorrection": "no",
+              "autocapitalization": "none"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Section_knxd342s6otom4qgk2nv6bptja",
+        "title": "security questions",
+        "fields": [
+          {
+            "t": "favorite car",
+            "v": "Volvo",
+            "k": "concealed",
+            "n": "pi77xy4vmt4cegcvsqjkro67qm"
+          },
+          {
+            "t": "nickname",
+            "v": "stinky",
+            "k": "concealed",
+            "n": "pz6eyqcyynjtgusv2bljr6ebe4"
+          },
+          {
+            "t": "famous site",
+            "v": "Yellowstone",
+            "k": "concealed",
+            "n": "yarjhz6zdgpgn5hvidarxq7mpa"
+          },
+          {
+            "t": "favorite superhero",
+            "v": "Spawn",
+            "k": "concealed",
+            "n": "3pmzopdgdtjipqkymtihek4nli"
+          },
+          {
+            "t": "favorite food",
+            "v": "Potatoes",
+            "k": "concealed",
+            "n": "dkrbdbrhicitueo5uwedjhpzia"
+          },
+          {
+            "t": "favorite candy bar",
+            "v": "Bounty",
+            "k": "concealed",
+            "n": "tg32mpamt3v4fje6wodyfvof7u"
+          }
+        ]
+      }
+    ],
+    "fields": [
+      {
+        "name": "username",
+        "value": "mkrecker",
+        "type": "T",
+        "designation": "username",
+        "id": ""
+      },
+      {
+        "name": "password",
+        "value": "TempoSawfish56",
+        "type": "P",
+        "designation": "password",
+        "id": ""
+      }
+    ],
+    "notesPlain": "\n"
+  },
+  "createdAt": "2021-10-03T22:16:59Z",
+  "updatedAt": "2023-05-25T21:47:12Z",
+  "faveIndex": 0,
+  "trashed": "N",
+  "templateUuid": "001",
+  "uuid": "4ljsvd4sto25ccbspohv6fa5cy"
+},
+{
+  "ConnectionStrings": {
+    "SqlServer_Customers": "Server=QA_N23.fullyqualified.domain; Database=Customers; Trusted_Connection=True; Encrypt=True;",
+    "SqlServer_Products": "Server=QA_N23.fullyqualified.domain; Database=Products; Trusted_Connection=True; Encrypt=True;",
+    "SqlServer_Clients": "Server=QA_N23.fullyqualified.domain; Database=Clients; Trusted_Connection=True; Encrypt=True;"
+  },
+  "Settings": {
+    "settingsId": "qa service",
+    "sessionTime": 15,
+    "grpcChannelAddress": "https://localhost:4112",
+    "useUpdated": true,
+    "useAuthorize": false,
+   "stubAuthentcate": false,
+   "paymentApiUris": ["paymentAPIpi77x.com","paymentAPIy4vmt.com","paymentAPI4cegc.com"],
+   "paymentApiUser": "tg32mpamt3v4fje6wodyfvof7u",
+    "clientId": 38,
+    "baseIncrement": 2.225,
+    "defaultTerms": [3,6,9,12,18]
+},
+  "AllowedHosts": "*",
+  "Kestrel": {
+    "EndpointDefaults": {
+      "Protocols": "Http2"
+    },
+    "Endpoints": {
+      "Https": {
+        "Url": "https://appserversVSQJK.fullyqualified.domain:4112",
+        "Certificate": {
+          "Subject": "appserversVSQJK.fullyqualified.domain",
+          "Store": "My",
+          "Location": "LocalMachine",
+          "AllowInvalid": true
+        }
+      }
+    }
+  }
+},
+{
+  "ConnectionStrings": {
+    "SqlServer_Customers": "Server=TEST_N23.fullyqualified.domain; Database=Customers; Trusted_Connection=True; Encrypt=True;",
+    "SqlServer_Products": "Server=TEST_N23.fullyqualified.domain; Database=Products; Trusted_Connection=True; Encrypt=True;",
+    "SqlServer_Clients": "Server=TEST_J23.fullyqualified.domain; Database=Clients; Trusted_Connection=True; Encrypt=True;"
+  },
+  "Settings": {
+    "SettingsId": "test service"
+    
+  },
+  "AllowedHosts": "*",
+  "Kestrel": {
+    "EndpointDefaults": {
+      "Protocols": "Http2"
+    },
+    "Endpoints": {
+      "Https": {
+        "Url": "https://appserversO67QM.fullyqualified.domain:4112",
+        "Certificate": {
+          "Subject": "appserversO67QM.fullyqualified.domain",
+          "Store": "My",
+          "Location": "LocalMachine",
+          "AllowInvalid": true
+        }
+      }
+    }
+  }
+},
+{
+	["Michael","Robert","Frank","Daisy","Alexis","Ricky","Joelle","Julien","Brinley","Jay","Marina","Gunnar","Phoebe"]
+["Beil","Norman","Warner","McDonald","Beltran","Fletcher","Meyers","Hale","Fletcher","Sawyer","Pope","Lawson","Freeman"],
+
+},
+{},
+{},
+{},
+{}
+]
+
+
+    "BaseUrl": "https://localhost:44308",
+    "ClientId": "eb343a99-ba17-4cc1-87f5-86a9bbb64943",
+    "ClientSecret": "2W/Z1@pn2[h.y000rpXtku*u]gD443O7",
+    "CallbackPath": "/signin-oidc",
+
+
+{
+  "ConnectionStrings": {
+    "SqlServer_Customers": "Server=QA_N23.fullyqualified.domain; Database=Customers; Trusted_Connection=True; Encrypt=True;",
+    "SqlServer_Products": "Server=QA_N23.fullyqualified.domain; Database=Products; Trusted_Connection=True; Encrypt=True;",
+    "SqlServer_Clients": "Server=QA_N23.fullyqualified.domain; Database=Clients; Trusted_Connection=True; Encrypt=True;"
+  },
+  "Settings": {
+    "settingsId": "qa service",
+    "sessionTime": 15,
+    "grpcChannelAddress": "https://localhost:4112",
+    "useUpdated": true,
+    "useAuthorize": false,
+   "stubAuthentcate": false,
+   "paymentApiUris": ["paymentAPIpi77x.com","paymentAPIy4vmt.com","paymentAPI4cegc.com"],
+   "paymentApiUser": "tg32mpamt3v4fje6wodyfvof7u",
+    "clientId": 38,
+    "baseIncrement": 2.225,
+    "defaultTerms": [3,6,9,12,18]
+},
+
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "Shared.Services": "Trace"
+    },
+    "Console": {
+      "LogLevel": {
+        "Default": "Information",
+        "Microsoft": "Warning",
+        "Microsoft.Hosting.Lifetime": "Information",
+        "WebApi": "Trace",
+        "Shared": "Trace"
+
+      },
+      "FormatterName": "simple",
+      "FormatterOptions": {
+        "SingleLine": false,
+        "IncludeScopes": false,
+        "TimestampFormat": "HH:mm:ss ",
+        "UseUtcTimestamp": true,
+        "JsonWriterOptions": {
+          "Indented": true
+        }
+      }
+    }
+  },
+  "AllowedHosts": "*",
+  "ChangeSubscription": {
+    "ServiceBusTopic": "sb-appconfigurationchangetopic",
+    "ServiceBusSubscriptionPrefix": "appconfigchange-",
+    "AutoDeleteOnIdleInHours": 168,
+    "ServiceBusConnectionString": "secrets.json",
+    "MaxDelayBeforeCacheIsMarkedDirtyInSeconds" :  30
+  },
+  "ApplicationInsights": {
+    "ConnectionString": "secrets.json",
+    "EnableDependencyTrackingTelemetryModule": true,
+    "EnableDependencyTrackingTelemetryModule:OnlyLogFailed": true,
+    "EnablePerformanceCounterCollectionModule": false
+  },
+  "ConnectionStrings": {
+    "AppConfig": "secrets.json"
+  },
+  "API": {
+    "Settings": {
+      "DemoSettings": {
+        "FromLocal": "From file. No environment!"
+      }
+    }
+  },
+  "UseAzureAppConfiguration": true
+}
