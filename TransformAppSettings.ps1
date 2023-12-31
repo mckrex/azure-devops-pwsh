@@ -3,10 +3,8 @@
   Transform a settings .json file using logic similar to that used to transform .xml configuration files.
 
   .DESCRIPTION
-  .Net Core use .json files for external app configuration (typically appsettings.json). The standard means to transform a settings file
-  deploying to various environments is to overlay some or all of a base settings file with a file matched to an environemnr. For example, when 
-  deploying to QA, at startup, the application can overlay appsettings.json with a file called appsettings.QA.json, then load those settings 
-  into memory.
+  .Net Core uses .json files for external app configuration (typically appsettings.json). The standard means to transform a settings file
+  deploying to various environments is to overlay some or all of a base settings file with a file matched to an environment. 
 
   For various reasons, an organization may need to employ logic more similar to that used for transforming XML configuration files. This script 
   fulfills that goal, producing a single file that can be copied to the server before application startup. It is specifically created for use in
@@ -20,17 +18,16 @@
   name.
 
   .PARAMETER BaseFileName
-  The base file that needs to be transformed, typically 'AppSettings.json'. Files to be used to alter that base file must have the name pattern 
-  'AppSettings.SOMENAME.json'. Typically, the tranformation file would be named for an environment: 'AppSettings.QA.json'. ANY file matching the
+  The base file that needs to be transformed, typically 'appsettings.json'. Files to be used to alter that base file must have the name pattern 
+  'appsettings.SOMENAME.json'. Typically, the tranformation file would be named for an environment: 'appsettings.QA.json'. ANY file matching the
   pattern will be used to transform the base file. The transform files are collected by Get-ChildItem using the default, alphabetical order. The 
-  'Merge' tranform action can be used to prevent multiple files from overwriting certain settings, andthe file names can be used to control the 
-  order of tranforamtions.
+  'Merge' tranform action can be used to prevent multiple files from overwriting certain settings, and the file names can be used to control the 
+  order of transformations.
 
   .PARAMETER OutputDirectory
   The output location for the transformed file, which will have the same name as the base file. If the FileSource and OutputDirectory are the same,
   the original file will be overwritten.
 #>
-
 
 param (
     $FileSource = $env:FILESOURCE, 
@@ -38,12 +35,10 @@ param (
     $OutputDirectory = $env:OUTPUTDIRECTORY
 )
 
-
 if ($host.Version.Major -eq 7) {
     $PSStyle.OutputRendering = [System.Management.Automation.OutputRendering]::PlainText;
 }
 
- $debug = $DebugPreference -eq "SilentlyContinue"
 <#
 .DESCRIPTION
 Holds values used in a tranformation file that indicate the changes to the base file. The available actions are:
@@ -57,6 +52,38 @@ enum TransformType {
     MERGE
     ADD
     REMOVE
+}
+
+#https://www.powershellgallery.com/packages/pspm/1.1.3/Content/functions%5CFormat-Json.ps1
+function Format-Json {
+    param
+    (
+        [Parameter(Mandatory, ValueFromPipeline)]
+        [string]
+        $json,
+
+        [int]
+        $indentSize = 4
+    ) 
+
+    $indent = 0;
+    $result = ($json -Split '\n' |
+        ForEach-Object {
+            if ($_ -match '[\}\]]') {
+                # This line contains ] or }, decrement the indentation level
+                $indent--
+            }
+            $line = (' ' * $indent * $indentSize) + $_.TrimStart().Replace(': ', ': ')
+            if ($_ -match '[\{\[]') {
+                # This line contains [ or {, increment the indentation level
+                $indent++
+            }
+            $line
+        }) -Join "`n"
+    
+    # Unescape Html characters (<>&') (and remove extra space after colons)
+    $result.Replace('\u0027', "'").Replace('\u003c', "<").Replace('\u003e', ">").Replace('\u0026', "&").Replace(":  ", ": ")
+    
 }
 class TransformationData {
     [string]$FileName
@@ -80,7 +107,7 @@ function Edit-SettingsObject{
         $transformObject, 
         [Int32]
         #the depth to search for properties to tranform
-        $maxLevel = 10
+        $maxLevel = 25
         )
     $baseObject.PSObject.Properties | ForEach-Object {
         $level = 1
@@ -91,8 +118,6 @@ function Edit-SettingsObject{
             Write-Host "               -> RECURSE $level"
             $tempUpdatedObject = Edit-SettingsObject -baseObject $_.Value -transformObject $transformObject.PSObject.Properties[$_.Name].Value -level ($level + 1)
             $baseObject.PSObject.Properties[$_.Name].Value =  $tempUpdatedObject
-            #$baseObject.PSObject.Properties.Remove($_.Name)
-            #$baseObject | Add-Member -NotePropertyName $_.Name -NotePropertyValue $tempUpdatedObject
         }
     }
     $transformObject.PSObject.Properties | ForEach-Object {
@@ -104,7 +129,7 @@ function Edit-SettingsObject{
                 switch ([TransformType]$settingData[0]){
                     REPLACE { 
                         Write-Host "       replace -> $($settingData[1])"
-                        Write-Host "       $($baseObject.PSObject.Properties[$settingData[1]].Value) becomes $($transformObject.PSObject.Properties[$tranformSettingName].Value)"
+                        Write-Host "       $($baseObject.PSObject.Properties[$settingData[1]].Value ?? "'null'") becomes $($transformObject.PSObject.Properties[$tranformSettingName].Value ?? "'null'")"
                         if ($baseObject.PSObject.Properties[$settingData[1]].Value -is [Array]){
                             $baseObject.PSObject.Properties[$settingData[1]].Value = @($transformObject.PSObject.Properties[$tranformSettingName].Value)
                         } else {
@@ -118,7 +143,7 @@ function Edit-SettingsObject{
                         if ($baseObject.PSObject.Properties[$settingData[1]].Value -is [Array]){
                             $baseObject.PSObject.Properties[$settingData[1]].Value += $transformObject.PSObject.Properties[$tranformSettingName].Value
                         } elseif ($baseObject.PSObject.Properties[$settingData[1]].Value.GetType().Name -eq "PSCustomObject") {
-                            Write-Host "       properties cannot be merged into complex objects; use the 'add' transform action on a new property inside the object instead"
+                            Write-Host "       properties cannot be merged into complex objects; instead, use the 'ADD' transform action on a new property inside this object"
                         } 
                         return
                     }
@@ -133,7 +158,7 @@ function Edit-SettingsObject{
                 $baseObject | Add-Member -NotePropertyName $settingData[1] -NotePropertyValue $transformObject.PSObject.Properties[$tranformSettingName].Value
                 return
             } elseif ([TransformType]$settingData[0] -eq [TransformType]::ADD -and [bool]$baseObject.PSObject.Properties[$settingData[1]]){
-                Write-Host "       property already exisits and cannot be added or altered using the 'add' transform action"
+                Write-Host "       property already exisits and cannot be added or altered using the 'ADD' transform action"
                 return
             }
         } else {
@@ -176,7 +201,7 @@ function Edit-AppSettings {
     }
     $transformObjects | ForEach-Object {
         [string]::Format("Applying values to base settings file {0} using {1}", $baseFile.Name, $_.FileName) | Write-Host 
-        $baseObject = Edit-SettingsObject -baseObject $baseObject -transformObject $_.TransformObject -level 1
+        $baseObject = Edit-SettingsObject -baseObject $baseObject -transformObject $_.TransformObject
     }
     return $baseObject
 }
@@ -185,25 +210,37 @@ function Edit-AppSettings {
 # SCRIPT BODY
 
 if ($false -eq (Test-Path -Path $FileSource)) {
-    Write-Host "No directory found at source location $FileSource"
+    Write-Host "No directory found at $FileSource"
+    return
 }
 
 $baseFile = Get-ChildItem -Path $FileSource\* -Filter $BaseFileName
-$transformFiles = Get-ChildItem -Path $FileSource\* -Filter $BaseFileName.Replace(".json", ".*.json") -Exclude $BaseFileName
-$updatedSettings = Edit-AppSettings -baseFile $baseFile -transformFiles $transformFiles
-if ($debug -eq $true){
-    $count = (((Get-ChildItem -Path $OutputDirectory -Filter $BaseFileName.Replace(".json", "*.json")).Name | Where-Object {$_ -match "\d{3}.json"} ).Count + 1).ToString("000")
-    $updatedSettings | ConvertTo-Json | Out-File (Join-Path -Path $OutputDirectory -ChildPath $BaseFileName.Replace(".json", ".$count.json")) -Force
+if ($null -eq $baseFile) {
+    Write-Host "No base file found in $FileSource"
     return
 }
-$updatedSettings | ConvertTo-Json | Out-File (Join-Path -Path $OutputDirectory -ChildPath $BaseFileName) -Force
+$transformFiles = Get-ChildItem -Path $FileSource\* -Filter $BaseFileName.Replace(".json", ".*.json") -Exclude $BaseFileName
+if ($null -eq $transformFiles) {
+    Write-Host "No transform files found in $FileSource"
+    return
+}
+
+$updatedSettings = Edit-AppSettings -baseFile $baseFile -transformFiles $transformFiles
+if ($env:DEBUG -eq $true){
+    $count = (((Get-ChildItem -Path $OutputDirectory -Filter $BaseFileName.Replace(".json", "*.json")).Name | Where-Object {$_ -match "\d{3}.json"} ).Count + 1).ToString("000")
+    $updatedSettings | ConvertTo-Json -Depth 100 | Format-Json | Out-File -Encoding utf8 (Join-Path -Path $OutputDirectory -ChildPath $BaseFileName.Replace(".json", ".$count.json")) -Force
+    return
+}
+$updatedSettings | ConvertTo-Json -Depth 100 | Format-Json | Out-File -Encoding utf8 (Join-Path -Path $OutputDirectory -ChildPath $BaseFileName) -Force
 
 <#
 
-cd D:\_prj\github\azure_devops_pwsh
+cd D:\_prj\github\azure-devops-pwsh
 
-$env:FILESOURCE = "tests\basic_tests\alter_object"
+$env:DEBUG -eq $true
+$env:FILESOURCE = "tests\basic_tests\alter_child_object"
 $env:BASEFILENAME = "appsettings.json"
-$env:OUTPUTDIRECTORY = "tests\basic_tests\alter_object\output"
+$env:OUTPUTDIRECTORY = "tests\basic_tests\alter_child_object\output"
+
 #>
 
