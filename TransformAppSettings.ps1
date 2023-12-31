@@ -28,7 +28,6 @@
   The output location for the transformed file, which will have the same name as the base file. If the FileSource and OutputDirectory are the same,
   the original file will be overwritten.
 #>
-using namespace System.Text.Json
 
 param (
     $FileSource = $env:FILESOURCE, 
@@ -39,8 +38,6 @@ param (
 if ($host.Version.Major -eq 7) {
     $PSStyle.OutputRendering = [System.Management.Automation.OutputRendering]::PlainText;
 }
-
- 
 
 <#
 .DESCRIPTION
@@ -213,11 +210,20 @@ function Edit-AppSettings {
 # SCRIPT BODY
 
 if ($false -eq (Test-Path -Path $FileSource)) {
-    Write-Host "No directory found at source location $FileSource"
+    Write-Host "No directory found at $FileSource"
+    return
 }
 
 $baseFile = Get-ChildItem -Path $FileSource\* -Filter $BaseFileName
+if ($null -eq $baseFile) {
+    Write-Host "No base file found in $FileSource"
+    return
+}
 $transformFiles = Get-ChildItem -Path $FileSource\* -Filter $BaseFileName.Replace(".json", ".*.json") -Exclude $BaseFileName
+if ($null -eq $transformFiles) {
+    Write-Host "No transform files found in $FileSource"
+    return
+}
 
 $updatedSettings = Edit-AppSettings -baseFile $baseFile -transformFiles $transformFiles
 if ($env:DEBUG -eq $true){
@@ -232,9 +238,9 @@ $updatedSettings | ConvertTo-Json -Depth 100 | Format-Json | Out-File -Encoding 
 cd D:\_prj\github\azure-devops-pwsh
 
 $env:DEBUG -eq $true
-$env:FILESOURCE = "tests\basic_tests\2_alter_child_object"
+$env:FILESOURCE = "tests\basic_tests\alter_child_object"
 $env:BASEFILENAME = "appsettings.json"
-$env:OUTPUTDIRECTORY = "tests\basic_tests\2_alter_child_object\output"
+$env:OUTPUTDIRECTORY = "tests\basic_tests\alter_child_object\output"
 
 #>
 
