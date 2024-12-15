@@ -29,6 +29,13 @@
   the original file will be overwritten.
 #>
 
+$debug = $DebugPreference -eq "SilentlyContinue"
+
+if ($debug -eq $true){
+    $env:FILESOURCE = "tests\basic_tests\alter_child_object"
+    $env:BASEFILENAME = 
+    $env:OUTPUTDIRECTORY = "tests\basic_tests\alter_child_object\output"
+}
 param (
     $FileSource = $env:FILESOURCE, 
     $BaseFileName = $env:BASEFILENAME, 
@@ -226,7 +233,7 @@ if ($null -eq $transformFiles) {
 }
 
 $updatedSettings = Edit-AppSettings -baseFile $baseFile -transformFiles $transformFiles
-if ($env:DEBUG -eq $true){
+if ($debug -eq $true){
     $count = (((Get-ChildItem -Path $OutputDirectory -Filter $BaseFileName.Replace(".json", "*.json")).Name | Where-Object {$_ -match "\d{3}.json"} ).Count + 1).ToString("000")
     $updatedSettings | ConvertTo-Json -Depth 100 | Format-Json | Out-File -Encoding utf8 (Join-Path -Path $OutputDirectory -ChildPath $BaseFileName.Replace(".json", ".$count.json")) -Force
     return
@@ -237,10 +244,10 @@ $updatedSettings | ConvertTo-Json -Depth 100 | Format-Json | Out-File -Encoding 
 
 cd D:\_prj\github\azure-devops-pwsh
 
-$env:DEBUG -eq $true
 $env:FILESOURCE = "tests\basic_tests\alter_child_object"
 $env:BASEFILENAME = "appsettings.json"
 $env:OUTPUTDIRECTORY = "tests\basic_tests\alter_child_object\output"
 
+. 'D:\_prj\github\azure-devops-pwsh\TransformAppSettings.ps1' -FileSource "D:\_prj\github\azure-devops-pwsh\tests\basic_tests\alter_child_object" -BaseFileName "appsettings.json" -OutputDirectory "D:\_prj\github\azure-devops-pwsh\tests\basic_tests\alter_child_object\output"
 #>
 
