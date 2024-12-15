@@ -29,18 +29,18 @@
   the original file will be overwritten.
 #>
 
-$debug = $DebugPreference -eq "SilentlyContinue"
-
-if ($debug -eq $true){
-    $env:FILESOURCE = "tests\basic_tests\alter_child_object"
-    $env:BASEFILENAME = 
-    $env:OUTPUTDIRECTORY = "tests\basic_tests\alter_child_object\output"
-}
-param (
-    $FileSource = $env:FILESOURCE, 
-    $BaseFileName = $env:BASEFILENAME, 
-    $OutputDirectory = $env:OUTPUTDIRECTORY
+param ( 
+    [string]$FileSource, 
+    [string]$BaseFileName, 
+    [string]$OutputDirectory
 )
+
+$debug = $DebugPreference -eq "SilentlyContinue"
+if ($debug -eq $true){
+    $FileSource = "$($PSScriptRoot)\tests\basic_tests\add_complex_object"
+    $BaseFileName = "appsettings.json"
+    $OutputDirectory = "$($PSScriptRoot)\tests\basic_tests\add_complex_object\output"
+}
 
 if ($host.Version.Major -eq 7) {
     $PSStyle.OutputRendering = [System.Management.Automation.OutputRendering]::PlainText;
@@ -226,7 +226,7 @@ if ($null -eq $baseFile) {
     Write-Host "No base file found in $FileSource"
     return
 }
-$transformFiles = Get-ChildItem -Path $FileSource\* -Filter $BaseFileName.Replace(".json", ".*.json") -Exclude $BaseFileName
+$transformFiles = @(Get-ChildItem -Path $FileSource\* -Filter $BaseFileName.Replace(".json", ".*.json") -Exclude $BaseFileName)
 if ($null -eq $transformFiles) {
     Write-Host "No transform files found in $FileSource"
     return
@@ -239,15 +239,4 @@ if ($debug -eq $true){
     return
 }
 $updatedSettings | ConvertTo-Json -Depth 100 | Format-Json | Out-File -Encoding utf8 (Join-Path -Path $OutputDirectory -ChildPath $BaseFileName) -Force
-
-<#
-
-cd D:\_prj\github\azure-devops-pwsh
-
-$env:FILESOURCE = "tests\basic_tests\alter_child_object"
-$env:BASEFILENAME = "appsettings.json"
-$env:OUTPUTDIRECTORY = "tests\basic_tests\alter_child_object\output"
-
-. 'D:\_prj\github\azure-devops-pwsh\TransformAppSettings.ps1' -FileSource "D:\_prj\github\azure-devops-pwsh\tests\basic_tests\alter_child_object" -BaseFileName "appsettings.json" -OutputDirectory "D:\_prj\github\azure-devops-pwsh\tests\basic_tests\alter_child_object\output"
-#>
 
