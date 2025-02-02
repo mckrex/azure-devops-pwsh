@@ -35,11 +35,13 @@ param (
     [string]$OutputDirectory
 )
 
-$debug = $DebugPreference -eq "SilentlyContinue"
+#simple setting to debug in VSCode; when set to $true params can be set below and output actios will not overwrite previusly generated results 
+$debug = $true
+
 if ($debug -eq $true){
-    $FileSource = "$($PSScriptRoot)\tests\basic_tests\add_complex_object"
+    $FileSource = "$($PSScriptRoot)\tests\basic_tests\multiple_transforms"
     $BaseFileName = "appsettings.json"
-    $OutputDirectory = "$($PSScriptRoot)\tests\basic_tests\add_complex_object\output"
+    $OutputDirectory = "$($PSScriptRoot)\tests\basic_tests\multiple_transforms\output"
 }
 
 if ($host.Version.Major -eq 7) {
@@ -137,11 +139,7 @@ function Edit-SettingsObject{
                     REPLACE { 
                         Write-Host "       replace -> $($settingData[1])"
                         Write-Host "       $($baseObject.PSObject.Properties[$settingData[1]].Value ?? "'null'") becomes $($transformObject.PSObject.Properties[$tranformSettingName].Value ?? "'null'")"
-                        if ($baseObject.PSObject.Properties[$settingData[1]].Value -is [Array]){
-                            $baseObject.PSObject.Properties[$settingData[1]].Value = @($transformObject.PSObject.Properties[$tranformSettingName].Value)
-                        } else {
-                            $baseObject.PSObject.Properties[$settingData[1]].Value = $transformObject.PSObject.Properties[$tranformSettingName].Value
-                        }
+                        $baseObject.PSObject.Properties[$settingData[1]].Value = $transformObject.PSObject.Properties[$tranformSettingName].Value
                         return
                     }
                     MERGE {
@@ -150,8 +148,11 @@ function Edit-SettingsObject{
                         if ($baseObject.PSObject.Properties[$settingData[1]].Value -is [Array]){
                             $baseObject.PSObject.Properties[$settingData[1]].Value += $transformObject.PSObject.Properties[$tranformSettingName].Value
                         } elseif ($baseObject.PSObject.Properties[$settingData[1]].Value.GetType().Name -eq "PSCustomObject") {
-                            Write-Host "       properties cannot be merged into complex objects; instead, use the 'ADD' transform action on a new property inside this object"
-                        } 
+                            Write-Host "       properties can only be merged into arrays; use the 'ADD' transform action to insert a new property inside this object"
+                        }
+                        else {
+                            Write-Host "       properties can only be merged into arrays; use the 'REPLACE' transform action to change a property's value"
+                        }
                         return
                     }
                     REMOVE {
@@ -178,7 +179,7 @@ function Edit-SettingsObject{
 
 <#
 .DESCRIPTION
-Alters a base settings file with a transform file. The content of each file is laoded into memory and mosfied by the Edit-SettingsObject function.
+Alters a base settings file with a transform file. The content of each file is laoded into memory and modified by the Edit-SettingsObject function.
 #>
 function Edit-AppSettings {
     param(
@@ -234,6 +235,7 @@ if ($null -eq $transformFiles) {
 
 $updatedSettings = Edit-AppSettings -baseFile $baseFile -transformFiles $transformFiles
 if ($debug -eq $true){
+    # when debugging, the output file will be named with a sequence number so differences between iterations can be compared
     $count = (((Get-ChildItem -Path $OutputDirectory -Filter $BaseFileName.Replace(".json", "*.json")).Name | Where-Object {$_ -match "\d{3}.json"} ).Count + 1).ToString("000")
     $updatedSettings | ConvertTo-Json -Depth 100 | Format-Json | Out-File -Encoding utf8 (Join-Path -Path $OutputDirectory -ChildPath $BaseFileName.Replace(".json", ".$count.json")) -Force
     return
